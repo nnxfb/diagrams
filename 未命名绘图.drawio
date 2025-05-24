@@ -1,8 +1,39 @@
-nnxfb@ubuntu2404:~$ sudo ssh -vT git@github.com
-OpenSSH_9.6p1 Ubuntu-3ubuntu13.11, OpenSSL 3.0.13 30 Jan 2024
-debug1: Reading configuration data /etc/ssh/ssh_config
-debug1: /etc/ssh/ssh_config line 19: include /etc/ssh/ssh_config.d/*.conf matched no files
-debug1: /etc/ssh/ssh_config line 21: Applying options for *
-debug1: Connecting to github.com [20.205.243.166] port 22.
-debug1: connect to address 20.205.243.166 port 22: Connection refused
-ssh: connect to host github.com port 22: Connection refused
+#!/bin/sh
+
+if [ $# -eq 0 ]; then
+	echo "usage: $0 <arguments>"
+	echo "  -p <pid>"
+	echo "  -n <name>"
+	echo "  [-f <frequency>]"
+	exit "  [-k]"
+	exit 0
+fi
+name=""
+freq=99
+pid=""
+keep=0
+while [ $# -gt 0]; do
+	if [ "$1" -eq "-p" ]; then
+		shift
+		pid="$1"
+	elif [ "$1" -eq "-f" ]; then
+		shift
+		freq="$1"
+	elif [ "$1" -eq "-n" ]; then
+		name="$1"
+		shift
+	else
+		echo "unknown $1"
+		exit 0
+	fi
+done
+
+# if
+perf record -g -F $freq -p $pid -- sleep 30
+perf script -i perf.data > perf.unfold
+if [ ! -s "perf.unfold"] then
+	echo "0 samples"
+	exit 0
+fi
+./FlameGraph/stackcollapse-perf.pl perf.unfold > perf.folded
+./FlameGragh/flamegragh.pl perf.folded > perf.svg
